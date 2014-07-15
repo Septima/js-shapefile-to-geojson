@@ -286,6 +286,53 @@
         _readPolyLine: function(record){
             return this._readPolygon(record);
         },
+        _readPointM: function(record){
+            return this._readPointZ(record)
+        },
+        _readMultiPointM : function(record){
+            return this._readMultiPointZ(record)
+        },
+        _readPolyLineM: function(record){
+            return this._readPolyLineZ(record)
+        },
+        _readPolygonM: function(record){
+            return this._readPolygonZ(record)
+        },
+        _readPointZ: function(record){
+            var s = this.stream
+            // Read 2D part
+            record.x = s.readDouble()
+            record.y = s.readDouble()
+            
+            // Skip Z (and M if present)
+            s.offset += record.length - 20
+            
+            return record
+        },
+        _readMultiPointZ: function(record){
+            var s = this.stream
+            // Read 2D part
+            this._readBounds(record)
+            this._readPoints(record)
+            
+            // Skip Z (and M if present)
+            s.offset += record.length - (40 + 16 * record.numPoints)
+            return record
+        },        
+        _readPolygonZ: function(record){
+            var s = this.stream
+            // Read 2D part
+            this._readBounds(record)
+            this._readParts(record)
+            this._readPoints(record)
+        
+            // Skip Z (and M if present)
+            s.offset += record.length - (44 + 4 * record.numParts + 16 * record.numPoints)
+            return record
+        },
+        _readPolyLineZ: function(record){
+            return this._readPolygonZ(record)
+        },
         formatIntoGeoJson: function(){
             var bounds = this.header.bounds,
                 records = this.records,
@@ -305,7 +352,7 @@
             for (var r = 0, record; record = records[r]; r++){
                 feature = {}, fbounds = record.bounds, points = record.points, parts = record.parts
                 feature.type = "Feature"
-                if (record.shapeType !== 'Point') {
+                if (record.shapeType.substring(0,5) !== 'Point') {
                     feature.bbox = [
                         fbounds.left,
                         fbounds.bottom,
@@ -317,14 +364,20 @@
 
                 switch (record.shapeType) {
                     case "Point":
+                    case "PointZ":
+                    case "PointM":
                         geometry.type = "Point"
                         geometry.coordinates = [
                             record.x,
                             record.y ]
                         break
                     case "MultiPoint":
+                    case "MultiPointZ":
+                    case "MultiPointM":
                     case "PolyLine":
-                        geometry.type = (record.shapeType == "PolyLine" ? "LineString" : "MultiPoint")
+                    case "PolyLineZ":
+                    case "PolyLineM":
+                        geometry.type = (record.shapeType.substring(0,8) == "PolyLine" ? "LineString" : "MultiPoint")
                         gcoords = geometry.coordinates = []
 
                         for (var p = 0; p < points.length; p++){
@@ -333,6 +386,8 @@
                         }
                         break
                     case "Polygon":
+                    case "PolygonZ":
+                    case "PolygonM":
                         geometry.type = "Polygon"
                         gcoords = geometry.coordinates = []
 
