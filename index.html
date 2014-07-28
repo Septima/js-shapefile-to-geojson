@@ -30,13 +30,13 @@
 
 
             var starttime = +new Date,
-                map = new OpenLayers.Map("map",{allOverlays: true}),
+                map = new OpenLayers.Map("map",{allOverlays: true, minResolution: 0.00001072883605957031}),
                 parser = new OpenLayers.Format.GeoJSON(),
                 vector = new OpenLayers.Layer.Vector("Converted"),
 
                 shapefile = new Shapefile({
-                    shp: "testdata/world.shp",
-                    dbf: "testdata/world.dbf"
+                    shp: "testdata/SinglePolygonZ.shp",
+                    dbf: "testdata/SinglePolygonZ.dbf"
                 }, function(data){
                     var features = parser.read(data.geojson);
                     vector.addFeatures(features);
@@ -47,6 +47,7 @@
                 })
 
             map.addLayer(vector);
+            
         </script>
     </body>
 </html>
