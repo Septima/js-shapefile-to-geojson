@@ -124,50 +124,52 @@ var win = self,
         readFloat: function(){
             return this._readFloatingPoint(8, 23);
         },
-
+        
         _readFloatingPoint: function(numEBits, numSBits){
-            var numBits = 1 + numEBits + numSBits,
-                numBytes = numBits / 8,
-                t = this,
-                val = 0.0;
-            if(numBytes > 4){
-                var i = Math.ceil(numBytes / 4);
-                while(i--){
-                    var buff = [],
-                        o = t.offset,
-                        j = o + (numBytes >= 4 ? 4 : numBytes % 4);
-                    while(j > o){
-                        buff.push(t.readByteAt(--j));
-                        numBytes--;
-                        t.offset++;
-                    }
-                }
-                var s = new Gordon.Stream(fromCharCode.apply(String, buff)),
-                    sign = s.readUB(1),
-                    expo = s.readUB(numEBits),
-                    mantis = 0,
-                    i = numSBits;
-                while(i--){
-                    if(s.readBool()){ mantis += Math.pow(2, i); }
-                }
-            }else{
-                var sign = t.readUB(1),
-                    expo = t.readUB(numEBits),
-                    mantis = t.readUB(numSBits);
+          // From https://gist.github.com/bartaz/1119041
+          var numBits = 1 + numEBits + numSBits,
+          numBytes = numBits / 8,
+          t = this,
+          val = 0.0,
+          ebits = numEBits,
+          fbits = numSBits;
+          var bytes = [];
+          for(var i = 0; i < numBytes; i++){
+            bytes.push( t.readUI8() );
+          }    
+          bytes.reverse();
+          
+          // Bytes to bits
+          var bits = [];
+          for (var i = bytes.length; i; i -= 1) {
+            var byte = bytes[i - 1];
+            for (var j = 8; j; j -= 1) {
+              bits.push(byte % 2 ? 1 : 0); byte = byte >> 1;
             }
-            if(sign || expo || mantis){
-                var maxExpo = Math.pow(2, numEBits),
-                    bias = ~~((maxExpo - 1) / 2),
-                    scale = Math.pow(2, numSBits),
-                    fract = mantis / scale;
-                if(bias){
-                    if(bias < maxExpo){ val = Math.pow(2, expo - bias) * (1 + fract); }
-                    else if(fract){ val = NaN; }
-                    else{ val = Infinity; }
-                }else if(fract){ val = Math.pow(2, 1 - bias) * fract; }
-                if(NaN != val && sign){ val *= -1; }
-            }
-            return val;
+          }
+          bits.reverse();
+          var str = bits.join('');
+          
+          // Unpack sign, exponent, fraction
+          var bias = (1 << (ebits - 1)) - 1;
+          var s = parseInt(str.substring(0, 1), 2) ? -1 : 1;
+          var e = parseInt(str.substring(1, 1 + ebits), 2);
+          var f = parseInt(str.substring(1 + ebits), 2);
+          
+          // Produce number
+          if (e === (1 << ebits) - 1) {
+            return f !== 0 ? NaN : s * Infinity;
+          }
+          else if (e > 0) {
+            return s * Math.pow(2, e - bias) * (1 + f / Math.pow(2, fbits));
+          }
+          else if (f !== 0) {
+            return s * Math.pow(2, -(bias-1)) * (f / Math.pow(2, fbits));
+          }
+          else {
+            return s * 0;
+          }
+          
         },
 
         readFloat16: function(){

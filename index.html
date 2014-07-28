@@ -35,8 +35,8 @@
                 vector = new OpenLayers.Layer.Vector("Converted"),
 
                 shapefile = new Shapefile({
-                    shp: "testdata/SinglePolygonZ.shp",
-                    dbf: "testdata/SinglePolygonZ.dbf"
+                    shp: "testdata/polygonZ.shp",
+                    dbf: "testdata/polygonZ.dbf"
                 }, function(data){
                     var features = parser.read(data.geojson);
                     vector.addFeatures(features);
