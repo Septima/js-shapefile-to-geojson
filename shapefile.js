@@ -360,6 +360,7 @@
                         fbounds.top
                     ]                    
                 }
+                feature.properties = {}
                 geometry = feature.geometry = {}
 
                 switch (record.shapeType) {
