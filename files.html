@@ -50,10 +50,25 @@
                     });
                 }
             }
+            
+          var addEventHandler = function (obj, evt, handler) {
+        if (obj.addEventListener) {
+            // W3C method
+            obj.addEventListener(evt, handler, false);
+        } else if (obj.attachEvent) {
+            // IE method.
+            obj.attachEvent('on' + evt, handler);
+        } else {
+            // Old school method.
+            obj['on' + evt] = handler;
+        }
+    }
 
             document.body.onload = function(){
-                document.getElementById('shp').addEventListener('change', onchange, false);
-                document.getElementById('dbf').addEventListener('change', onchange, false);
+              addEventHandler(document.getElementById('shp'),'change', onchange );
+              addEventHandler(document.getElementById('dbf'),'change', onchange );
+                //document.getElementById('shp').addEventListener('change', onchange, false);
+                //document.getElementById('dbf').addEventListener('change', onchange, false);
             }
         </script>
         <br>
