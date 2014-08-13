@@ -82,14 +82,27 @@
                 that = this
             
             xhr.open("GET", o.shp, false)
-            xhr.overrideMimeType("text/plain; charset=x-user-defined")
+            //xhr.overrideMimeType("text/plain; charset=x-user-defined")
+            // new browsers (XMLHttpRequest2-compliant)
+            if ('responseType' in xhr) {
+                 xhr.responseType = 'arraybuffer';
+            }
+            else { alert('Din browser understøtter ikke Shapefiler') }
+            // // old browsers (XMLHttpRequest-compliant)
+            // else if ('overrideMimeType' in xhr) {
+            //     xhr.overrideMimeType('text/plain; charset=x-user-defined');
+            // }
+            // // IE9 (Microsoft.XMLHTTP-compliant)
+            // else {
+            //     xhr.setRequestHeader('Accept-Charset', 'x-user-defined');
+            // }
             xhr.send()
 
             if(200 != xhr.status)
                 throw "Unable to load " + o.shp + " status: " + xhr.status
 
             this.url = o.shp
-            this.stream = new Gordon.Stream(xhr.responseText)
+            this.stream = new makeStream(xhr.response)
 
             this.readFileHeader()
             this.readRecords()
@@ -119,13 +132,13 @@
             })(this);
 
             if (!!window.FileReader) {
-                reader.readAsBinaryString(o.shp);
+                reader.readAsArrayBuffer(o.shp);
             } else {
-                this.onFileLoad(reader.readAsBinaryString(o.shp));   
+                this.onFileLoad(reader.readAsArrayBuffer(o.shp));   
             }
         },
         onFileLoad: function(data) {
-            this.stream = new Gordon.Stream(data)
+            this.stream = new makeStream(data)
 
             this.readFileHeader()
             this.readRecords()
@@ -163,7 +176,7 @@
                 throw "Invalid File Code"
 
             // Unused; five uint32
-            s.offset += 4 * 5
+            s.offset(4 * 5)
 
             // File length (in 16-bit words, including the header)
             header.fileLength = s.readSI32(true) * 2
@@ -195,11 +208,20 @@
 
             do {
                 record = {}
-
-                // Record number (1-based)
-                record.id = s.readSI32(true)
-
-                if(record.id == 0) break //no more records
+                
+                
+                try {
+                  // Record number (1-based)
+                  record.id = s.readSI32(true);
+		            } catch (err) {
+		              if ((err instanceof RangeError) || (err instanceof TypeError)) {
+                    // Chrome throws RangeError. IE throws TypeError
+                    //no more records
+			              break;
+		              } else {
+			              throw err;
+		              }
+		            }
 
                 // Record length (in 16-bit words)
                 record.length = s.readSI32(true) * 2
@@ -305,7 +327,7 @@
             record.y = s.readDouble()
             
             // Skip Z (and M if present)
-            s.offset += record.length - 20
+            s.offset(record.length - 20)
             
             return record
         },
@@ -316,7 +338,7 @@
             this._readPoints(record)
             
             // Skip Z (and M if present)
-            s.offset += record.length - (40 + 16 * record.numPoints)
+            s.offset(record.length - (40 + 16 * record.numPoints))
             return record
         },        
         _readPolygonZ: function(record){
@@ -327,7 +349,7 @@
             this._readPoints(record)
         
             // Skip Z (and M if present)
-            s.offset += record.length - (44 + 4 * record.numParts + 16 * record.numPoints)
+            s.offset(record.length - (44 + 4 * record.numParts + 16 * record.numPoints))
             return record
         },
         _readPolyLineZ: function(record){

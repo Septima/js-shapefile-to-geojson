@@ -86,7 +86,7 @@
             }
         },
         onFileLoad: function(data) {
-            this.stream = new Gordon.Stream(data)
+            this.stream = new makeStream(data)
 
             this.readFileHeader()
             this.readFieldDescriptions()
@@ -98,13 +98,16 @@
             var xhr = new XMLHttpRequest();
 
             xhr.open("GET", url, false)
-            xhr.overrideMimeType("text/plain; charset=x-user-defined")
+            if ('responseType' in xhr) {
+                 xhr.responseType = 'arraybuffer';
+            }
+            else { alert('Din browser understøtter ikke Shapefiler') }
             xhr.send()
 
             if(200 != xhr.status)
                 throw "Unable to load " + url + " status: " + xhr.status
 
-            this.stream = new Gordon.Stream(xhr.responseText)
+            this.stream = new makeStream(xhr.response)
             this.callback = callback
 
             this.readFileHeader()
@@ -146,7 +149,7 @@
             header.recordLength = s.readSI16()
 
             // Reserved; filled with zeros
-            s.offset += 16
+            s.offset(16)
 
             /*
             Table flags:
@@ -161,7 +164,7 @@
             header.codePageMark = s.readSI8()
 
             // Reserved; filled with zeros.
-            s.offset += 2
+            s.offset(2)
 
         },
         readFieldDescriptions: function(){
@@ -170,7 +173,7 @@
                 field
 
             while (s.readSI8() != 0x0D) {
-                s.offset--
+                s.offset(-1)
                 field = {}
 
                 // Field name with a maximum of 10 characters. If less than 10, it is padded with null characters (0x00).
@@ -204,7 +207,7 @@
                 field.autoincrementStepValue = s.readSI8()
 
                 // Reserved
-                s.offset += 8
+                s.offset(8)
 
                 fields.push(field)
             }
@@ -223,7 +226,7 @@
                 field, record
 
             for (var index = 0; index < numRecords; index++) {
-                s.offset = recordsOffset + index * recordSize
+                //s.offset = recordsOffset + index * recordSize
 
                 record = {}
 
